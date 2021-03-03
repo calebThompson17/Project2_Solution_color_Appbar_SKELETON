@@ -3,6 +3,8 @@ package com.example.solution_color;
 
 import android.Manifest;
 import android.content.Intent;
+
+import androidx.preference.EditTextPreference;
 import androidx.preference.PreferenceManager;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
@@ -58,10 +60,10 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     private String shareText;
 
     // Preference names
-    private static final String SATURATION_NAME = "Saturation";
-    private static final String BWPercent_NAME = "BWPercent";
-    private static final String SHARE_SUBJECT_NAME = "ShareSubject";
-    private static final String SHARE_TEXT_NAME = "ShareText";
+    private final String SATURATION_NAME = getString(R.string.preference_saturation_key);
+    private final String BWPercent_NAME = getString(R.string.preference_sketchiness_key);
+    private final String SHARE_SUBJECT_NAME = getString(R.string.preference_subject_key);
+    private final String SHARE_TEXT_NAME = getString(R.string.preference_text_key);
 
     //where images go
     private String originalImagePath;   //where orig image is
@@ -109,10 +111,11 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         myImage = (ImageView) findViewById(R.id.imageView1);
 
 
-        //TO DO manage the preferences and the shared preference listenes
+
         // TO DO and get the values already there getPrefValues(settings);
         //TO DO use getPrefValues(SharedPreferences settings)
         getPrefValues(getSharedPreferences(PREF_FILE_NAME, MODE_PRIVATE));
+
 
         // Fetch screen height and width,
         DisplayMetrics metrics = this.getResources().getDisplayMetrics();
@@ -120,6 +123,15 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         screenwidth = metrics.widthPixels;
 
         setUpFileSystem();
+        //TO DO manage the preferences and the shared preference listenes
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.OnSharedPreferenceChangeListener listener =
+                new SharedPreferences.OnSharedPreferenceChangeListener() {
+                    @Override
+                    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+                        MainActivity.this.onSharedPreferenceChanged(sharedPreferences, key);
+                    }
+                };
     }
 
     private void setImage() {
@@ -231,7 +243,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     @Override
     public void onRequestPermissionsResult(int permsRequestCode, String[] permissions, int[] grantResults) {
         //TODO fill in
-        // BEGIN_INCLUDE(onRequestPermissionsResult)
+
         // Request for camera permission.
         if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             // Permission has been granted. Start camera preview Activity.
@@ -250,7 +262,6 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
             // Permission request was denied.
             Toast.makeText(this,"Permission Denied",Toast.LENGTH_LONG).show();
         }
-        // END_INCLUDE(onRequestPermissionsResult)
     }
 
     //DUMP for students
@@ -262,22 +273,53 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
 
         //TODO fill in
         boolean allGranted = true;
-        if (!askForPermissionIfNeeded("android.permission.CAMERA")) allGranted = false;
-        if (!askForPermissionIfNeeded("android.permission.WRITE_EXTERNAL_STORAGE")) allGranted = false;
-        if (!askForPermissionIfNeeded("android.permission.READ_EXTERNAL_STORAGE")) allGranted = false;
+        if (!askForPermissionIfNeeded("android.permission.CAMERA", PERMISSION_REQUEST_CAMERA)) allGranted = false;
+        if (!askForPermissionIfNeeded("android.permission.WRITE_EXTERNAL_STORAGE", PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE)) allGranted = false;
+        if (!askForPermissionIfNeeded("android.permission.READ_EXTERNAL_STORAGE", PERMISSION_REQUEST_READ_EXTERNAL_STORAGE)) allGranted = false;
+
+//        // Check for Camera Permission
+//        if (ActivityCompat.checkSelfPermission(this, "android.permission.CAMERA")
+//                == android.content.pm.PackageManager.PERMISSION_DENIED) {
+//            Toast.makeText(this,"Permission needed",Toast.LENGTH_LONG).show();
+//            ActivityCompat.requestPermissions(MainActivity.this,
+//                    new String[]{Manifest.permission.CAMERA},
+//                    PERMISSION_REQUEST_CAMERA);
+//            if (ActivityCompat.checkSelfPermission(this, "android.permission.CAMERA")
+//                    == android.content.pm.PackageManager.PERMISSION_DENIED) allGranted = false;
+//        }
+//        // Check for Read Storage Permission
+//        if (ActivityCompat.checkSelfPermission(this, "android.permission.READ_EXTERNAL_STORAGE")
+//                == android.content.pm.PackageManager.PERMISSION_DENIED) {
+//            Toast.makeText(this,"Permission needed",Toast.LENGTH_LONG).show();
+//            ActivityCompat.requestPermissions(MainActivity.this,
+//                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+//                    PERMISSION_REQUEST_READ_EXTERNAL_STORAGE);
+//            if (ActivityCompat.checkSelfPermission(this, "android.permission.READ_EXTERNAL_STORAGE")
+//                    == android.content.pm.PackageManager.PERMISSION_DENIED) allGranted = false;
+//        }
+//        // Check for Write Storage Permission
+//        if (ActivityCompat.checkSelfPermission(this, "android.permission.READ_EXTERNAL_STORAGE")
+//                == android.content.pm.PackageManager.PERMISSION_DENIED) {
+//            Toast.makeText(this,"Permission needed",Toast.LENGTH_LONG).show();
+//            ActivityCompat.requestPermissions(MainActivity.this,
+//                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+//                    PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE);
+//            if (ActivityCompat.checkSelfPermission(this, "android.permission.READ_EXTERNAL_STORAGE")
+//                    == android.content.pm.PackageManager.PERMISSION_DENIED) allGranted = false;
+//        }
 
         //and return false until they are granted
         return allGranted;
     }
 
     // Self-built method
-    private boolean askForPermissionIfNeeded(String permission) {
+    private boolean askForPermissionIfNeeded(String permission, int permissionIdentifier) {
         if (ActivityCompat.checkSelfPermission(this, permission)
                 == android.content.pm.PackageManager.PERMISSION_DENIED) {
             Toast.makeText(this,"Permission needed",Toast.LENGTH_LONG).show();
             ActivityCompat.requestPermissions(MainActivity.this,
-                    new String[]{Manifest.permission.CAMERA},
-                    PERMISSION_REQUEST_CAMERA);
+                    new String[]{permission},
+                    permissionIdentifier);
         }
         return ActivityCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED;
     }
@@ -330,7 +372,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     }
 
     public void doSketch() {
-        //TODO verify that app has permission to use file system
+        //TO DO verify that app has permission to use file system
         //do we have needed permissions?
         if (!verifyPermissions()) {
             return;
@@ -352,7 +394,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     }
 
     public void doColorize() {
-        //TODO verify that app has permission to use file system
+        //TO DO verify that app has permission to use file system
         //do we have needed permissions?
         if (!verifyPermissions()) {
             return;
@@ -396,18 +438,56 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
 
     }
 
-    //TODO set this up
+    //TO DO set this up
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        //TODO handle all of the appbar button clicks
-
+        //TO DO handle all of the appbar button clicks
+        switch (item.getItemId()) {
+            case R.id.menu_revert:
+                doReset();
+                break;
+            case R.id.menu_edit:
+                doSketch();
+                break;
+            case R.id.menu_view:
+                doColorize();
+                break;
+            case R.id.menu_share:
+                doShare();
+                break;
+            case R.id.menu_settings:
+                Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+                startActivity(intent);
+                break;
+        }
         return true;
     }
 
-    //TODO set up pref changes
+    //TO DO set up pref changes
     @Override
-    public void onSharedPreferenceChanged(SharedPreferences arg0, String arg1) {
+    public void onSharedPreferenceChanged(SharedPreferences settings, String key) {
         //TODO reload prefs at this point
+
+        if (key.equals(SHARE_SUBJECT_NAME)) shareSubject = settings.getString(SHARE_SUBJECT_NAME, getString(R.string.shareTitle));
+        else if (key.equals(SHARE_TEXT_NAME)) shareText = settings.getString(SHARE_TEXT_NAME, "");
+        else if (key.equals(SATURATION_NAME)) saturation = settings.getInt(SATURATION_NAME, DEFAULT_COLOR_PERCENT);
+        else if (key.equals(BWPercent_NAME)) bwPercent = settings.getInt(BWPercent_NAME, DEFAULT_BW_PERCENT);
+
+//        // save preferences
+//        switch (key) {
+//            case SHARE_SUBJECT_NAME:
+//                shareSubject = settings.getString(SHARE_SUBJECT_NAME, "");
+//                break;
+//            case SHARE_TEXT_NAME:
+//                shareText = settings.getString(SHARE_TEXT_NAME, "");
+//                break;
+//            case SATURATION_NAME:
+//                saturation = settings.getInt(SATURATION_NAME, DEFAULT_COLOR_PERCENT);
+//                break;
+//            case BWPercent_NAME:
+//                bwPercent = settings.getInt(BWPercent_NAME, DEFAULT_BW_PERCENT);
+//                break;
+//        }
     }
 
     /**
