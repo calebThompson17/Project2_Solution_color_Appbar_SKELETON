@@ -40,13 +40,14 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import static androidx.preference.PreferenceManager.getDefaultSharedPreferences;
+
 public class MainActivity extends AppCompatActivity implements OnSharedPreferenceChangeListener {
 
     //these are constants and objects that I used, use them if you wish
     private static final String DEBUG_TAG = "CartoonActivity";
     private static final String ORIGINAL_FILE = "origfile.png";
     private static final String PROCESSED_FILE = "procfile.png";
-    private static final String PREF_FILE_NAME = "preferences.xml";
 
     private static final int TAKE_PICTURE = 1;
     private static final double SCALE_FROM_0_TO_255 = 2.55;
@@ -60,10 +61,10 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     private String shareText;
 
     // Preference names
-    private final String SATURATION_NAME = getString(R.string.preference_saturation_key);
-    private final String BWPercent_NAME = getString(R.string.preference_sketchiness_key);
-    private final String SHARE_SUBJECT_NAME = getString(R.string.preference_subject_key);
-    private final String SHARE_TEXT_NAME = getString(R.string.preference_text_key);
+    private String SATURATION_NAME;
+    private String BWPercent_NAME;
+    private String SHARE_SUBJECT_NAME;
+    private String SHARE_TEXT_NAME;
 
     //where images go
     private String originalImagePath;   //where orig image is
@@ -109,13 +110,14 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
 
         //get the default image
         myImage = (ImageView) findViewById(R.id.imageView1);
-
-
+        SATURATION_NAME = getString(R.string.preference_saturation_key);
+        BWPercent_NAME = getString(R.string.preference_sketchiness_key);
+        SHARE_SUBJECT_NAME = getString(R.string.preference_subject_key);
+        SHARE_TEXT_NAME = getString(R.string.preference_text_key);
 
         // TO DO and get the values already there getPrefValues(settings);
         //TO DO use getPrefValues(SharedPreferences settings)
-        getPrefValues(getSharedPreferences(PREF_FILE_NAME, MODE_PRIVATE));
-
+        getPrefValues(getDefaultSharedPreferences(this));
 
         // Fetch screen height and width,
         DisplayMetrics metrics = this.getResources().getDisplayMetrics();
@@ -124,7 +126,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
 
         setUpFileSystem();
         //TO DO manage the preferences and the shared preference listenes
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences prefs = getDefaultSharedPreferences(this);
         SharedPreferences.OnSharedPreferenceChangeListener listener =
                 new SharedPreferences.OnSharedPreferenceChangeListener() {
                     @Override
@@ -250,6 +252,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
             Toast.makeText(this,"Permission granted",Toast.LENGTH_LONG).show();
             if (permsRequestCode == PERMISSION_REQUEST_CAMERA) {
 //              TODO:!  Do camera stuff;
+//                doTakePicture();
             }
             else if (permsRequestCode == PERMISSION_REQUEST_READ_EXTERNAL_STORAGE) {
 //              TODO:!  Do read storage stuff;
@@ -326,10 +329,30 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
 
     //take a picture and store it on external storage
     public void doTakePicture() {
-        //TODO verify that app has permission to use camera
+        //TO DO verify that app has permission to use camera
+        if (!verifyPermissions()) return;
 
-        //TODO manage launching intent to take a picture
+        //TO DO manage launching intent to take a picture
+        // create intent to take picture with camera and specify storage
+        // location so we can easily get it
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
+        if (intent.resolveActivity(getPackageManager()) != null){
+            // Create the File where the photo should go
+            File photoFile = createImageFile(PROCESSED_FILE);
+
+            // Continue only if the File was successfully created
+            //  see https://developer.android.com/reference/androidx/core/content/FileProvider
+            if (photoFile != null) {
+                outputFileUri = FileProvider.getUriForFile(this,
+                        "com.example.intentdemo.fileprovider",
+                        photoFile);
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, outputFileUri);
+                startActivityForResult(intent, TAKE_PICTURE);
+            }
+        }
+        else
+            Toast.makeText(this,"UhOhhhh....No camera mate", Toast.LENGTH_SHORT).show();
     }
 
     //TODO manage return from camera and other activities
@@ -348,7 +371,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
      * delete original and processed images, then rescan media paths to pick up that they are gone.
      */
     private void doReset() {
-        //TODO verify that app has permission to use file system
+        //TO DO verify that app has permission to use file system
         //do we have needed permissions?
         if (!verifyPermissions()) {
             return;
@@ -367,7 +390,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         //save this for restoring
         bmpOriginal = BitMap_Helpers.copyBitmap(myImage.getDrawable());
 
-        //TODO make media scanner pick up that images are gone
+        //TO DO make media scanner pick up that images are gone
 
     }
 
@@ -435,6 +458,13 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
 
         //TODO share the processed image with appropriate subject, text and file URI
         //TODO the subject and text should come from the preferences set in the Settings Activity
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_EMAIL, getString(R.string.from_email_address));
+        intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.shareTitle));
+        intent.putExtra(Intent.EXTRA_TEXT, getString(R.string.sharemessage));
+        intent.putExtra(Intent.EXTRA_STREAM, Uri.parse(outputFileUri.toString()));
+        startActivity(Intent.createChooser(intent, getString(R.string.shareTitle)));
 
     }
 
@@ -442,24 +472,32 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         //TO DO handle all of the appbar button clicks
-        switch (item.getItemId()) {
-            case R.id.menu_revert:
-                doReset();
-                break;
-            case R.id.menu_edit:
-                doSketch();
-                break;
-            case R.id.menu_view:
-                doColorize();
-                break;
-            case R.id.menu_share:
-                doShare();
-                break;
-            case R.id.menu_settings:
-                Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-                startActivity(intent);
-                break;
+        if (item.getItemId() == R.id.menu_revert) doReset();
+        else if (item.getItemId() == R.id.menu_edit) doSketch();
+        else if (item.getItemId() == R.id.menu_view) doColorize();
+        else if (item.getItemId() == R.id.menu_share) doShare();
+        else if (item.getItemId() == R.id.menu_settings) {
+            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            startActivity(intent);
         }
+//        switch (item.getItemId()) {
+//            case R.id.menu_revert:
+//                doReset();
+//                break;
+//            case R.id.menu_edit:
+//                doSketch();
+//                break;
+//            case R.id.menu_view:
+//                doColorize();
+//                break;
+//            case R.id.menu_share:
+//                doShare();
+//                break;
+//            case R.id.menu_settings:
+//                Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+//                startActivity(intent);
+//                break;
+//        }
         return true;
     }
 
