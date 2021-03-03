@@ -2,4 +2,29 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
 <!--TODO fill these in-->
+    <item
+        android:id="@+id/menu_revert"
+        android:orderInCategory="100"
+        android:title="@string/menu_revert_title"
+        android:icon="@android:drawable/ic_menu_revert"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/menu_edit"
+        android:orderInCategory="200"
+        android:title="@string/menu_edit_title"
+        android:icon="@android:drawable/ic_menu_edit"
+        app:showAsAction="ifRoom"/>
+    <item
+        android:id="@+id/menu_view"
+        android:orderInCategory="300"
+        android:title="@string/menu_view_title"
+        android:icon="@android:drawable/ic_menu_view"
+        app:showAsAction="ifRoom"/>
+    <item
+        android:id="@+id/menu_share"
+        android:orderInCategory="400"
+        android:title="@string/menu_share_title"
+        android:icon="@android:drawable/ic_menu_share"
+        app:showAsAction="ifRoom"/>
+
 </menu>

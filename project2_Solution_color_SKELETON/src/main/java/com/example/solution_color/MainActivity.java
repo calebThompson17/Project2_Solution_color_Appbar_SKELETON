@@ -14,6 +14,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
+import android.os.Environment;
 import android.provider.MediaStore;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     private static final String DEBUG_TAG = "CartoonActivity";
     private static final String ORIGINAL_FILE = "origfile.png";
     private static final String PROCESSED_FILE = "procfile.png";
+    private static final String PREF_FILE_NAME = "preferences.xml";
 
     private static final int TAKE_PICTURE = 1;
     private static final double SCALE_FROM_0_TO_255 = 2.55;
@@ -54,6 +56,12 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     private int bwPercent = DEFAULT_BW_PERCENT;
     private String shareSubject;
     private String shareText;
+
+    // Preference names
+    private static final String SATURATION_NAME = "Saturation";
+    private static final String BWPercent_NAME = "BWPercent";
+    private static final String SHARE_SUBJECT_NAME = "ShareSubject";
+    private static final String SHARE_TEXT_NAME = "ShareText";
 
     //where images go
     private String originalImagePath;   //where orig image is
@@ -71,14 +79,19 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     Bitmap bmpThresholded;              //the black and white version of original image
     Bitmap bmpThresholdedColor;         //the colorized version of the black and white image
 
-    //TODO manage all the permissions you need
+    //TO DO manage all the permissions you need
+    private static final int PERMISSION_REQUEST_CAMERA = 3;
+    private static final int PERMISSION_REQUEST_READ_EXTERNAL_STORAGE = 4;
+    private static final int PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE = 5;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //TODO be sure to set up the appbar in the activity
+        //TO DO be sure to set up the appbar in the activity
+        Toolbar toolbar = (Toolbar)findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
         //dont display these
         getSupportActionBar().setDisplayShowTitleEnabled(false);
@@ -87,8 +100,8 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //TODO manage this, mindful of permissions
-
+                //TO DO manage this, mindful of permissions
+                if (verifyPermissions()) doTakePicture();
             }
         });
 
@@ -96,9 +109,10 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         myImage = (ImageView) findViewById(R.id.imageView1);
 
 
-        //TODO manage the preferences and the shared preference listenes
-        // TODO and get the values already there getPrefValues(settings);
-        //TODO use getPrefValues(SharedPreferences settings)
+        //TO DO manage the preferences and the shared preference listenes
+        // TO DO and get the values already there getPrefValues(settings);
+        //TO DO use getPrefValues(SharedPreferences settings)
+        getPrefValues(getSharedPreferences(PREF_FILE_NAME, MODE_PRIVATE));
 
         // Fetch screen height and width,
         DisplayMetrics metrics = this.getResources().getDisplayMetrics();
@@ -131,10 +145,24 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         Log.d(DEBUG_TAG, "setImage: bmpOriginal copied");
     }
 
-    //TODO use this to set the following member preferences whenever preferences are changed.
-    //TODO Please ensure that this function is called by your preference change listener
+    //TO DO use this to set the following member preferences whenever preferences are changed.
+    //TO DO Please ensure that this function is called by your preference change listener
     private void getPrefValues(SharedPreferences settings) {
-        //TODO should track shareSubject, shareText, saturation, bwPercent
+        //TO DO should track shareSubject, shareText, saturation, bwPercent
+
+        // save preferences
+//        SharedPreferences.Editor editor = settings.edit();
+//        editor.putString(SHARE_SUBJECT_NAME, shareSubject);
+//        editor.putString(SHARE_TEXT_NAME, shareText);
+//        editor.putInt(SATURATION_NAME, saturation);
+//        editor.putInt(BWPercent_NAME, bwPercent);
+//        editor.commit();  // save changes
+
+        // get preferences
+        shareSubject = settings.getString(SHARE_SUBJECT_NAME, "");
+        shareText = settings.getString(SHARE_TEXT_NAME, "");
+        saturation = settings.getInt(SATURATION_NAME, DEFAULT_COLOR_PERCENT);
+        bwPercent = settings.getInt(BWPercent_NAME, DEFAULT_BW_PERCENT);
     }
 
     @Override
@@ -146,8 +174,9 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
 
 
     private void setUpFileSystem(){
-        //TODO do we have needed permissions?
-        //TODO if not then dont proceed
+        //TO DO do we have needed permissions?
+        //TO DO if not then dont proceed
+        if (!verifyPermissions()) return;
 
         //get some paths
         // Create the File where the photo should go
@@ -165,11 +194,28 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         setImage();
     }
 
-    //TODO manage creating a file to store camera image in
-    //TODO where photo is stored
+    //TO DO manage creating a file to store camera image in
+    //TO DO where photo is stored
     private File createImageFile(final String fn) {
-        //TODO fill in
-        return null;
+        //TO DO fill in
+        try {
+            File[] storageDir = getExternalMediaDirs();
+            File imageFile = new File(storageDir[0], fn);
+            if (!storageDir[0].exists()) {
+                if (!storageDir[0].mkdirs()) {
+                    return null;
+                }
+            }
+            imageFile.createNewFile();
+            originalImagePath = imageFile.getAbsolutePath();
+            return imageFile;
+        } catch (IOException e) {
+            return null;
+        }
+
+//        File storageDir = getExternalMediaDirs()[0];
+//        File image = new File(storageDir, fn);
+//        return image;
     }
 
     //DUMP for students
@@ -185,6 +231,26 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     @Override
     public void onRequestPermissionsResult(int permsRequestCode, String[] permissions, int[] grantResults) {
         //TODO fill in
+        // BEGIN_INCLUDE(onRequestPermissionsResult)
+        // Request for camera permission.
+        if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            // Permission has been granted. Start camera preview Activity.
+            Toast.makeText(this,"Permission granted",Toast.LENGTH_LONG).show();
+            if (permsRequestCode == PERMISSION_REQUEST_CAMERA) {
+//              TODO:!  Do camera stuff;
+            }
+            else if (permsRequestCode == PERMISSION_REQUEST_READ_EXTERNAL_STORAGE) {
+//              TODO:!  Do read storage stuff;
+            }
+            else if (permsRequestCode == PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE) {
+//              TODO:!  Do write storage stuff;
+            }
+
+        } else {
+            // Permission request was denied.
+            Toast.makeText(this,"Permission Denied",Toast.LENGTH_LONG).show();
+        }
+        // END_INCLUDE(onRequestPermissionsResult)
     }
 
     //DUMP for students
@@ -195,9 +261,25 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     private boolean verifyPermissions() {
 
         //TODO fill in
+        boolean allGranted = true;
+        if (!askForPermissionIfNeeded("android.permission.CAMERA")) allGranted = false;
+        if (!askForPermissionIfNeeded("android.permission.WRITE_EXTERNAL_STORAGE")) allGranted = false;
+        if (!askForPermissionIfNeeded("android.permission.READ_EXTERNAL_STORAGE")) allGranted = false;
 
         //and return false until they are granted
-        return false;
+        return allGranted;
+    }
+
+    // Self-built method
+    private boolean askForPermissionIfNeeded(String permission) {
+        if (ActivityCompat.checkSelfPermission(this, permission)
+                == android.content.pm.PackageManager.PERMISSION_DENIED) {
+            Toast.makeText(this,"Permission needed",Toast.LENGTH_LONG).show();
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{Manifest.permission.CAMERA},
+                    PERMISSION_REQUEST_CAMERA);
+        }
+        return ActivityCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED;
     }
 
     //take a picture and store it on external storage
@@ -303,7 +385,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     }
 
     public void doShare() {
-        //TODO verify that app has permission to use file system
+        //TO DO verify that app has permission to use file system
         //do we have needed permissions?
         if (!verifyPermissions()) {
             return;
