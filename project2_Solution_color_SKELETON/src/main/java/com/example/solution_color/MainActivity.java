@@ -11,6 +11,7 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
@@ -115,16 +116,6 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         SHARE_SUBJECT_NAME = getString(R.string.preference_subject_key);
         SHARE_TEXT_NAME = getString(R.string.preference_text_key);
 
-        // TO DO and get the values already there getPrefValues(settings);
-        //TO DO use getPrefValues(SharedPreferences settings)
-        getPrefValues(getDefaultSharedPreferences(this));
-
-        // Fetch screen height and width,
-        DisplayMetrics metrics = this.getResources().getDisplayMetrics();
-        screenheight = metrics.heightPixels;
-        screenwidth = metrics.widthPixels;
-
-        setUpFileSystem();
         //TO DO manage the preferences and the shared preference listenes
         SharedPreferences prefs = getDefaultSharedPreferences(this);
         SharedPreferences.OnSharedPreferenceChangeListener listener =
@@ -134,6 +125,17 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
                         MainActivity.this.onSharedPreferenceChanged(sharedPreferences, key);
                     }
                 };
+
+        // TO DO and get the values already there getPrefValues(settings);
+        //TO DO use getPrefValues(SharedPreferences settings)
+        getPrefValues(prefs);
+
+        // Fetch screen height and width,
+        DisplayMetrics metrics = this.getResources().getDisplayMetrics();
+        screenheight = metrics.heightPixels;
+        screenwidth = metrics.widthPixels;
+
+        setUpFileSystem();
     }
 
     private void setImage() {
@@ -345,7 +347,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
             //  see https://developer.android.com/reference/androidx/core/content/FileProvider
             if (photoFile != null) {
                 outputFileUri = FileProvider.getUriForFile(this,
-                        "com.example.intentdemo.fileprovider",
+                        "com.example.solution_color.fileprovider",
                         photoFile);
                 intent.putExtra(MediaStore.EXTRA_OUTPUT, outputFileUri);
                 startActivityForResult(intent, TAKE_PICTURE);
@@ -356,13 +358,44 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     }
 
     //TODO manage return from camera and other activities
-    // TODO handle edge cases as well (no pic taken)
+    // TO DO handle edge cases as well (no pic taken)
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        //TODO get photo
-        //TODO set the myImage equal to the camera image returned
-        //TODO tell scanner to pic up this unaltered image
+        //TO DO get photo
+        if (requestCode == TAKE_PICTURE){
+            if (resultCode == RESULT_OK) {
+                // Get the dimensions of the View
+                int targetW = myImage.getWidth();
+                int targetH = myImage.getHeight();
+
+                // Get the dimensions of the bitmap
+                BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+                bmOptions.inJustDecodeBounds = true;
+                BitmapFactory.decodeFile(originalImagePath, bmOptions);
+                int photoW = bmOptions.outWidth;
+                int photoH = bmOptions.outHeight;
+
+                // Determine how much to scale down the image
+                int scaleFactor = Math.min(photoW/targetW, photoH/targetH);
+
+                // Decode the image file into a Bitmap sized to fill the View
+                bmOptions.inJustDecodeBounds = false;
+                bmOptions.inSampleSize = scaleFactor;
+                bmOptions.inPurgeable = true;
+
+                bmpOriginal = BitmapFactory.decodeFile(originalImagePath, bmOptions);
+
+                //TO DO set the myImage equal to the camera image returned
+                myImage.setImageBitmap(bmpOriginal);
+
+                //TO DO tell scanner to pic up this unaltered image
+                scanSavedMediaFile(originalImagePath);
+            }
+
+                //tell scanner to pic up this image
+//                scanSavedMediaFile(mCurrentPhotoPath);
+        }
         //TODO save anything needed for later
 
     }
@@ -463,8 +496,18 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         intent.putExtra(Intent.EXTRA_EMAIL, getString(R.string.from_email_address));
         intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.shareTitle));
         intent.putExtra(Intent.EXTRA_TEXT, getString(R.string.sharemessage));
-        intent.putExtra(Intent.EXTRA_STREAM, Uri.parse(outputFileUri.toString()));
-        startActivity(Intent.createChooser(intent, getString(R.string.shareTitle)));
+        Uri fileUri;
+        if (outputFileUri != null) {
+            fileUri = outputFileUri;
+        }
+        else {
+//            fileUri = Uri.fromFile(new File(originalImagePath));
+            fileUri = FileProvider.getUriForFile(this,
+                    "com.example.solution_color.fileprovider",
+                    createImageFile(ORIGINAL_FILE));
+        }
+        intent.putExtra(Intent.EXTRA_STREAM, Uri.parse(fileUri.toString()));
+        startActivity(Intent.createChooser(intent, "Share"));
 
     }
 
