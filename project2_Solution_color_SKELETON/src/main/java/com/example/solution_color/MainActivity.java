@@ -67,6 +67,9 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     private String SHARE_SUBJECT_NAME;
     private String SHARE_TEXT_NAME;
 
+    // Shared Preference Listener
+    SharedPreferences.OnSharedPreferenceChangeListener listener;
+
     //where images go
     private String originalImagePath;   //where orig image is
     private String processedImagePath;  //where processed image is
@@ -118,13 +121,14 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
 
         //TO DO manage the preferences and the shared preference listenes
         SharedPreferences prefs = getDefaultSharedPreferences(this);
-        SharedPreferences.OnSharedPreferenceChangeListener listener =
+        listener =
                 new SharedPreferences.OnSharedPreferenceChangeListener() {
                     @Override
                     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
                         MainActivity.this.onSharedPreferenceChanged(sharedPreferences, key);
                     }
                 };
+        prefs.registerOnSharedPreferenceChangeListener(listener);
 
         // TO DO and get the values already there getPrefValues(settings);
         //TO DO use getPrefValues(SharedPreferences settings)
@@ -494,8 +498,8 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType("text/plain");
         intent.putExtra(Intent.EXTRA_EMAIL, getString(R.string.from_email_address));
-        intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.shareTitle));
-        intent.putExtra(Intent.EXTRA_TEXT, getString(R.string.sharemessage));
+        intent.putExtra(Intent.EXTRA_SUBJECT, shareSubject);
+        intent.putExtra(Intent.EXTRA_TEXT, shareText);
         Uri fileUri;
         if (outputFileUri != null) {
             fileUri = outputFileUri;
@@ -504,7 +508,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
 //            fileUri = Uri.fromFile(new File(originalImagePath));
             fileUri = FileProvider.getUriForFile(this,
                     "com.example.solution_color.fileprovider",
-                    createImageFile(ORIGINAL_FILE));
+                    createImageFile(originalImagePath));
         }
         intent.putExtra(Intent.EXTRA_STREAM, Uri.parse(fileUri.toString()));
         startActivity(Intent.createChooser(intent, "Share"));
@@ -553,6 +557,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         else if (key.equals(SHARE_TEXT_NAME)) shareText = settings.getString(SHARE_TEXT_NAME, "");
         else if (key.equals(SATURATION_NAME)) saturation = settings.getInt(SATURATION_NAME, DEFAULT_COLOR_PERCENT);
         else if (key.equals(BWPercent_NAME)) bwPercent = settings.getInt(BWPercent_NAME, DEFAULT_BW_PERCENT);
+        else Toast.makeText(this,"NO Preferences updated",Toast.LENGTH_LONG).show();
 
 //        // save preferences
 //        switch (key) {
