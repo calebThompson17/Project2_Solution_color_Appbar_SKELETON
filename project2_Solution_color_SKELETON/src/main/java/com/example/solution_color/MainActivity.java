@@ -39,6 +39,7 @@ import com.library.bitmap_utilities.BitMap_Helpers;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import static androidx.preference.PreferenceManager.getDefaultSharedPreferences;
@@ -73,6 +74,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     //where images go
     private String originalImagePath;   //where orig image is
     private String processedImagePath;  //where processed image is
+    private Uri originalFileUri;        // originial Image Uri
     private Uri outputFileUri;          //tells camera app where to store image
 
     //used to measure screen size
@@ -97,7 +99,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         setContentView(R.layout.activity_main);
 
         //TO DO be sure to set up the appbar in the activity
-        Toolbar toolbar = (Toolbar)findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
         //dont display these
@@ -113,7 +115,7 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         });
 
         //get the default image
-        myImage = (ImageView) findViewById(R.id.imageView1);
+        myImage = findViewById(R.id.imageView1);
         SATURATION_NAME = getString(R.string.preference_saturation_key);
         BWPercent_NAME = getString(R.string.preference_sketchiness_key);
         SHARE_SUBJECT_NAME = getString(R.string.preference_subject_key);
@@ -179,8 +181,8 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
 //        editor.commit();  // save changes
 
         // get preferences
-        shareSubject = settings.getString(SHARE_SUBJECT_NAME, "");
-        shareText = settings.getString(SHARE_TEXT_NAME, "");
+        shareSubject = settings.getString(SHARE_SUBJECT_NAME, getString(R.string.shareTitle));
+        shareText = settings.getString(SHARE_TEXT_NAME, getString(R.string.sharemessage));
         saturation = settings.getInt(SATURATION_NAME, DEFAULT_COLOR_PERCENT);
         bwPercent = settings.getInt(BWPercent_NAME, DEFAULT_BW_PERCENT);
     }
@@ -202,9 +204,15 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         // Create the File where the photo should go
         File photoFile = createImageFile(ORIGINAL_FILE);
         originalImagePath = photoFile.getAbsolutePath();
+        originalFileUri = FileProvider.getUriForFile(this,
+                "com.example.solution_color.fileprovider",
+                photoFile);
 
         File processedfile = createImageFile(PROCESSED_FILE);
         processedImagePath=processedfile.getAbsolutePath();
+        outputFileUri = FileProvider.getUriForFile(this,
+                "com.example.solution_color.fileprovider",
+                processedfile);
 
         //worst case get from default image
         //save this for restoring
@@ -253,23 +261,23 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         //TODO fill in
 
         // Request for camera permission.
-        if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            // Permission has been granted. Start camera preview Activity.
-            Toast.makeText(this,"Permission granted",Toast.LENGTH_LONG).show();
-            if (permsRequestCode == PERMISSION_REQUEST_CAMERA) {
-//              TODO:!  Do camera stuff;
-//                doTakePicture();
+        for (int i=0; i<grantResults.length; i++) {
+            if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                // Permission has been granted. Start camera preview Activity.
+//                Toast.makeText(this,"Permission granted",Toast.LENGTH_LONG).show();
+                switch (permsRequestCode) {
+                    case PERMISSION_REQUEST_CAMERA:
+                        break;
+                    case PERMISSION_REQUEST_READ_EXTERNAL_STORAGE:
+                    case PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE:
+                        setUpFileSystem();
+                        getPrefValues(getDefaultSharedPreferences(this));
+                        break;
+                }
+            } else {
+                // Permission request was denied.
+//                Toast.makeText(this,"Permission Denied",Toast.LENGTH_LONG).show();
             }
-            else if (permsRequestCode == PERMISSION_REQUEST_READ_EXTERNAL_STORAGE) {
-//              TODO:!  Do read storage stuff;
-            }
-            else if (permsRequestCode == PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE) {
-//              TODO:!  Do write storage stuff;
-            }
-
-        } else {
-            // Permission request was denied.
-            Toast.makeText(this,"Permission Denied",Toast.LENGTH_LONG).show();
         }
     }
 
@@ -285,6 +293,84 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         if (!askForPermissionIfNeeded("android.permission.CAMERA", PERMISSION_REQUEST_CAMERA)) allGranted = false;
         if (!askForPermissionIfNeeded("android.permission.WRITE_EXTERNAL_STORAGE", PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE)) allGranted = false;
         if (!askForPermissionIfNeeded("android.permission.READ_EXTERNAL_STORAGE", PERMISSION_REQUEST_READ_EXTERNAL_STORAGE)) allGranted = false;
+
+        // Camera Permission Stuff
+//        if (ActivityCompat.checkSelfPermission(this, "android.permission.CAMERA")
+//                != PackageManager.PERMISSION_GRANTED) {
+//            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+//                    Manifest.permission.CAMERA)) {
+//                // Provide an additional rationale to the user if the permission was not granted
+//                // and the user would benefit from additional context for the use of the permission.
+//                // Display a SnackBar with cda button to request the missing permission.
+//                Toast.makeText(this, "camera access required",Toast.LENGTH_LONG).show();
+//            }
+//            // Request the permission
+//            ActivityCompat.requestPermissions(MainActivity.this,
+//                    new String[]{Manifest.permission.CAMERA},
+//                    PERMISSION_REQUEST_CAMERA);
+//            if (ActivityCompat.checkSelfPermission(this, "android.permission.CAMERA")
+//                    != PackageManager.PERMISSION_GRANTED) {
+//                allGranted = false;
+//            }
+//        }
+//        // Write External Storage Permission Stuff
+//        if (ActivityCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")
+//                != PackageManager.PERMISSION_GRANTED) {
+//            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+//                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+//                // Provide an additional rationale to the user if the permission was not granted
+//                // and the user would benefit from additional context for the use of the permission.
+//                // Display a SnackBar with cda button to request the missing permission.
+//                Toast.makeText(this, "external storage access required",Toast.LENGTH_LONG).show();
+//            }
+//            // Request the permission
+//            ActivityCompat.requestPermissions(MainActivity.this,
+//                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+//                    PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE);
+//            if (ActivityCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")
+//                    != PackageManager.PERMISSION_GRANTED) {
+//                allGranted = false;
+//            }
+//        }
+
+        // Both Permissions at once
+//        if (ActivityCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")
+//                != PackageManager.PERMISSION_GRANTED) {
+//            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+//                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+//                // Provide an additional rationale to the user if the permission was not granted
+//                // and the user would benefit from additional context for the use of the permission.
+//                // Display a SnackBar with cda button to request the missing permission.
+//                Toast.makeText(this, "external storage access required",Toast.LENGTH_LONG).show();
+//            }
+//            if (ActivityCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")
+//                    != PackageManager.PERMISSION_GRANTED) {
+//                allGranted = false;
+//            }
+//        }
+        // Request the permission
+//        ArrayList<String> permissionStringList = new ArrayList<String>();
+//        ArrayList<Integer> permissionIntegerList = new ArrayList<Integer>();
+//        if (ActivityCompat.checkSelfPermission(this, "android.permission.CAMERA")
+//                != PackageManager.PERMISSION_GRANTED) {
+//            permissionStringList.add(Manifest.permission.CAMERA);
+//            permissionIntegerList.add(PERMISSION_REQUEST_CAMERA);
+//        }
+//        if (ActivityCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")
+//                != PackageManager.PERMISSION_GRANTED) {
+//            permissionStringList.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+//            permissionIntegerList.add(PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE);
+//        }
+//        if (ActivityCompat.checkSelfPermission(this, "android.permission.READ_EXTERNAL_STORAGE")
+//                != PackageManager.PERMISSION_GRANTED) {
+//            permissionStringList.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+//            permissionIntegerList.add(PERMISSION_REQUEST_READ_EXTERNAL_STORAGE);
+//        }
+//        String[] permissionList = permissionStringList.toArray(new String[0]);
+//
+//        ActivityCompat.requestPermissions(MainActivity.this,
+//                permissionList,
+//                PERMISSION_REQUEST_CAMERA);
 
 //        // Check for Camera Permission
 //        if (ActivityCompat.checkSelfPermission(this, "android.permission.CAMERA")
@@ -307,13 +393,13 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
 //                    == android.content.pm.PackageManager.PERMISSION_DENIED) allGranted = false;
 //        }
 //        // Check for Write Storage Permission
-//        if (ActivityCompat.checkSelfPermission(this, "android.permission.READ_EXTERNAL_STORAGE")
+//        if (ActivityCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")
 //                == android.content.pm.PackageManager.PERMISSION_DENIED) {
 //            Toast.makeText(this,"Permission needed",Toast.LENGTH_LONG).show();
 //            ActivityCompat.requestPermissions(MainActivity.this,
 //                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
 //                    PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE);
-//            if (ActivityCompat.checkSelfPermission(this, "android.permission.READ_EXTERNAL_STORAGE")
+//            if (ActivityCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE")
 //                    == android.content.pm.PackageManager.PERMISSION_DENIED) allGranted = false;
 //        }
 
@@ -324,9 +410,9 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
     // Self-built method
     private boolean askForPermissionIfNeeded(String permission, int permissionIdentifier) {
         if (ActivityCompat.checkSelfPermission(this, permission)
-                == android.content.pm.PackageManager.PERMISSION_DENIED) {
-            Toast.makeText(this,"Permission needed",Toast.LENGTH_LONG).show();
-            ActivityCompat.requestPermissions(MainActivity.this,
+                != PackageManager.PERMISSION_GRANTED) {
+//            Toast.makeText(this,permission + "WE GOTTA HAVE IT",Toast.LENGTH_LONG).show();
+            ActivityCompat.requestPermissions(this,
                     new String[]{permission},
                     permissionIdentifier);
         }
@@ -506,9 +592,10 @@ public class MainActivity extends AppCompatActivity implements OnSharedPreferenc
         }
         else {
 //            fileUri = Uri.fromFile(new File(originalImagePath));
-            fileUri = FileProvider.getUriForFile(this,
-                    "com.example.solution_color.fileprovider",
-                    createImageFile(originalImagePath));
+//            fileUri = FileProvider.getUriForFile(this,
+//                    "com.example.solution_color.fileprovider",
+//                    createImageFile(PROCESSED_FILE));
+            fileUri = originalFileUri;
         }
         intent.putExtra(Intent.EXTRA_STREAM, Uri.parse(fileUri.toString()));
         startActivity(Intent.createChooser(intent, "Share"));
